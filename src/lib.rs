@@ -63,6 +63,14 @@ pub struct Workflow {
     api_token: Option<String>,
 }
 
+pub struct WorkflowExtract<'a> {
+    client: &'a reqwest::Client,
+    base_url: &'a str,
+    company: Option<(&'a str, header::HeaderValue)>,
+    user: Option<(&'a str, header::HeaderValue)>,
+    notification: Option<(&'a str, header::HeaderValue)>,
+}
+
 impl Workflow {
     pub fn new(base_url: &str) -> Self {
         Self {
@@ -115,41 +123,41 @@ impl Workflow {
         buckets::Buckets(self)
     }
 
-    pub(crate) fn extract_client_data(
-        &self,
-    ) -> Result<
-        (
-            &reqwest::Client,
-            &String,
-            (&str, header::HeaderValue),
-            (&str, header::HeaderValue),
-            (&str, header::HeaderValue),
-        ),
-        InvalidHeaderValue,
-    > {
+    pub(crate) fn extract_client_data(&self) -> Result<WorkflowExtract, InvalidHeaderValue> {
         let client = &self.http_client;
-        let base_url = &self.base_url;
-        let company = (
-            "x-company-id",
-            header::HeaderValue::from_str(
-                self.x_company_id.unwrap_or_default().to_string().as_str(),
-            )?,
-        );
-        let notification = (
-            "x-notification-id",
-            header::HeaderValue::from_str(
-                self.x_notification_id
-                    .unwrap_or_default()
-                    .to_string()
-                    .as_str(),
-            )?,
-        );
-        let user = (
-            "x-user-id",
-            header::HeaderValue::from_str(self.x_user_id.unwrap_or_default().to_string().as_str())?,
-        );
+        let base_url = self.base_url.as_str();
 
-        Ok((client, base_url, company, user, notification))
+        let company = match self.x_company_id {
+            Some(company) => Some((
+                "x-company-id",
+                header::HeaderValue::from_str(company.to_string().as_str())?,
+            )),
+            None => None,
+        };
+
+        let user = match self.x_user_id {
+            Some(user) => Some((
+                "x-user-id",
+                header::HeaderValue::from_str(user.to_string().as_str())?,
+            )),
+            None => None,
+        };
+
+        let notification = match self.x_notification_id {
+            Some(notification) => Some((
+                "x-notification-id",
+                header::HeaderValue::from_str(notification.to_string().as_str())?,
+            )),
+            None => None,
+        };
+
+        Ok(WorkflowExtract {
+            client,
+            base_url,
+            company,
+            user,
+            notification,
+        })
     }
 }
 

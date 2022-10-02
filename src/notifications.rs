@@ -127,12 +127,14 @@ pub struct ResBodyBroadCastMessage {}
 
 impl Notifications<'_> {
     pub async fn fetch_contact(&self) -> Result<Response, WorkflowError> {
-        let (client, base_url, company, user, _notifications) =
-            Workflow::extract_client_data(self.0)
-                .map_err(|e| WorkflowError::InvalidHeader(e.to_string()))?;
-        let url = format!("{}/contact", base_url);
+        let extract = Workflow::extract_client_data(self.0)
+            .map_err(|e| WorkflowError::InvalidHeader(e.to_string()))?;
+        let company = extract.company.unwrap();
+        let user = extract.user.unwrap();
+        let url = format!("{}/contact", extract.base_url);
 
-        let response = client
+        let response = extract
+            .client
             .get(url)
             .header(company.0, company.1)
             .header(user.0, user.1)
@@ -144,11 +146,15 @@ impl Notifications<'_> {
     }
 
     pub async fn send_message(&self, msg: &ReqBodyMessage<'_>) -> Result<Response, WorkflowError> {
-        let (client, base_url, company, user, notification) = Workflow::extract_client_data(self.0)
+        let extract = Workflow::extract_client_data(self.0)
             .map_err(|e| WorkflowError::InvalidHeader(e.to_string()))?;
+        let company = extract.company.unwrap();
+        let user = extract.user.unwrap();
+        let notification = extract.notification.unwrap();
 
-        let url = format!("{}/send-message", base_url);
-        let response = client
+        let url = format!("{}/send-message", extract.base_url);
+        let response = extract
+            .client
             .post(url)
             .json(msg)
             .header(company.0, company.1)
@@ -165,11 +171,15 @@ impl Notifications<'_> {
         &self,
         msg: &ReqBodyMessage<'_>,
     ) -> Result<Response, WorkflowError> {
-        let (client, base_url, company, user, notification) = Workflow::extract_client_data(self.0)
+        let extract = Workflow::extract_client_data(self.0)
             .map_err(|e| WorkflowError::InvalidHeader(e.to_string()))?;
+        let company = extract.company.unwrap();
+        let user = extract.user.unwrap();
+        let notification = extract.notification.unwrap();
 
-        let url = format!("{}/send-message", base_url);
-        let response = client
+        let url = format!("{}/send-message", extract.base_url);
+        let response = extract
+            .client
             .post(url)
             .json(msg)
             .header(company.0, company.1)
@@ -186,12 +196,14 @@ impl Notifications<'_> {
         &mut self,
         template_data: &ReqBodyTemplate<'_>,
     ) -> Result<Response, WorkflowError> {
-        let (client, base_url, company, user, _notification) =
-            Workflow::extract_client_data(self.0)
-                .map_err(|e| WorkflowError::InvalidHeader(e.to_string()))?;
+        let extract = Workflow::extract_client_data(self.0)
+            .map_err(|e| WorkflowError::InvalidHeader(e.to_string()))?;
+        let company = extract.company.unwrap();
+        let user = extract.user.unwrap();
 
-        let url = format!("{}/template", base_url);
-        let response = client
+        let url = format!("{}/template", extract.base_url);
+        let response = extract
+            .client
             .post(url)
             .json(template_data)
             .header(company.0, company.1)

@@ -42,16 +42,16 @@ pub struct ReqBodyFile {
 
 impl Buckets<'_> {
     pub async fn upload_file<'a>(&mut self, asset: ReqBodyFile) -> Result<Response, WorkflowError> {
-        // let encoded: Vec<u8> = bincode::serialize(asset).unwrap();
-
         let mut collect_response = Vec::new();
         let mut status_code = reqwest::StatusCode::ACCEPTED;
         let mut header = None;
+
         for file in asset.files {
-            let (client, base_url, company, user, _notification) =
-                Workflow::extract_client_data(self.0)
-                    .map_err(|e| WorkflowError::InvalidHeader(e.to_string()))?;
-            // let owner = serde_json::to_value(asset.owner.clone()).unwrap();
+            let extract = Workflow::extract_client_data(self.0)
+                .map_err(|e| WorkflowError::InvalidHeader(e.to_string()))?;
+            let company = extract.company.unwrap();
+            let user = extract.user.unwrap();
+
             let form = reqwest::multipart::Form::new();
             let upload_data = reqwest::multipart::Part::bytes(file.data().to_vec())
                 .file_name(file.name().to_owned())
@@ -65,10 +65,9 @@ impl Buckets<'_> {
                 .text("owner", asset.owner.1.to_string())
                 .part("upload", upload_data);
 
-            // dbg!(&form);
-
-            let url = format!("{}/assets", base_url);
-            let response = client
+            let url = format!("{}/assets", extract.base_url);
+            let response = extract
+                .client
                 .post(url)
                 .header(company.0, company.1)
                 .header(user.0, user.1)
