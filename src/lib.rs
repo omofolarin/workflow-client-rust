@@ -20,11 +20,11 @@ pub async fn get_json_response(response: reqwest::Response) -> Result<Response, 
     let response_body = response
         .json::<serde_json::Value>()
         .await
-        .map_err(|e| WorkflowError::Format(e))?;
+        .map_err(WorkflowError::Format)?;
     Ok(Response {
         status_code,
         response_headers,
-        response_body: response_body.to_owned(),
+        response_body,
     })
 }
 
@@ -55,7 +55,7 @@ impl ToString for WorkflowError {
 pub struct Workflow {
     http_client: reqwest::Client,
     base_url: String,
-    x_company_id: Option<Uuid>,
+    x_organization_id: Option<Uuid>,
     x_user_id: Option<Uuid>,
     x_notification_id: Option<Uuid>,
     x_storage_id: Option<Uuid>,
@@ -66,7 +66,7 @@ pub struct Workflow {
 pub struct WorkflowExtract<'a> {
     client: &'a reqwest::Client,
     base_url: &'a str,
-    company: Option<(&'a str, header::HeaderValue)>,
+    organization: Option<(&'a str, header::HeaderValue)>,
     user: Option<(&'a str, header::HeaderValue)>,
     notification: Option<(&'a str, header::HeaderValue)>,
 }
@@ -76,7 +76,7 @@ impl Workflow {
         Self {
             http_client: reqwest::Client::new(),
             base_url: base_url.to_owned(),
-            x_company_id: None,
+            x_organization_id: None,
             x_user_id: None,
             x_notification_id: None,
             x_storage_id: None,
@@ -85,8 +85,8 @@ impl Workflow {
         }
     }
 
-    pub fn set_company(&mut self, company_id: Uuid) -> &mut Self {
-        self.x_company_id = Some(company_id);
+    pub fn set_organization(&mut self, organization_id: Uuid) -> &mut Self {
+        self.x_organization_id = Some(organization_id);
         self
     }
 
@@ -127,10 +127,10 @@ impl Workflow {
         let client = &self.http_client;
         let base_url = self.base_url.as_str();
 
-        let company = match self.x_company_id {
-            Some(company) => Some((
-                "x-company-id",
-                header::HeaderValue::from_str(company.to_string().as_str())?,
+        let organization = match self.x_organization_id {
+            Some(organization) => Some((
+                "x-organization-id",
+                header::HeaderValue::from_str(organization.to_string().as_str())?,
             )),
             None => None,
         };
@@ -154,7 +154,7 @@ impl Workflow {
         Ok(WorkflowExtract {
             client,
             base_url,
-            company,
+            organization,
             user,
             notification,
         })
@@ -163,7 +163,7 @@ impl Workflow {
 
 // fn cool() {
 //     let a = Workflow::new("https://github.com/facebook")
-//         .set_company("")
+//         .set_organization("")
 //         .set_notification_config(Some(""))
 //         .notifications()
 //         .send_message(msg)
@@ -180,11 +180,11 @@ impl Workflow {
 //     #[test]
 //     async fn send_notifications() {
 //         let a = Workflow::new("https://github.com/facebook")
-//             .set_company(Uuid::new_v4())
+//             .set_organization(Uuid::new_v4())
 //             .set_notification_config(Some(Uuid::new_v4()))
 //             .notifications()
 //             .send_message(&ReqBodyMessage {
-//                 company_id: todo!(),
+//                 organization_id: todo!(),
 //                 from: todo!(),
 //                 to: todo!(),
 //                 subject: todo!(),
